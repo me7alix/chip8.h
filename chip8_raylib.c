@@ -31,7 +31,7 @@ void init_key_mapping(void) {
 
 const float frequency = 440.0f;
 const float sampleRate = 44100.0f;
-const float volume = 0.75f;
+const float volume = 0.01f;
 static float phase = 0.0f;
 static int beep = 0;
 
