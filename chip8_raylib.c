@@ -29,6 +29,30 @@ void init_key_mapping(void) {
 	key_mapping[KEY_V]     = 0xF;
 }
 
+const float frequency = 440.0f;
+const float sampleRate = 44100.0f;
+const float volume = 0.75f;
+static float phase = 0.0f;
+static int beep = 0;
+
+void audio_callback(void *data, unsigned frames) {
+	float *buffer = data;
+
+	for (unsigned i = 0; i < frames; i++) {
+		if (beep) {
+			buffer[i] = (phase < 0.5f) ? volume : -volume;
+		} else {
+			buffer[i] = 0.0f;
+		}
+
+		phase += frequency / sampleRate;
+
+		if (phase >= 1.0f) {
+			phase -= 1.0f;
+		}
+	}
+}
+
 int load_program(Chip8 *m, char *filename) {
 	FILE *f = fopen(filename, "rb");
 	if (!f) return 0;
@@ -49,19 +73,19 @@ int load_program(Chip8 *m, char *filename) {
 
 void print_usage() {
     fprintf(stderr,
-        "Usage: romulator [options] <rom>\n"
+        "Usage: chip8 [options] <rom>\n"
         "Options:\n"
-        "  -bg   Set the background color (default: 0x000000)\n"
-        "  -fg   Set the foreground color (default: 0x00FF00)\n"
+        "  -bg   Set the background color (default: 0x000000FF)\n"
+        "  -fg   Set the foreground color (default: 0x00FF00FF)\n"
         "  -rs   Set the CPU refresh rate multiplier (default: 14)\n"
         "  -ss   Set the screen scale factor (default: 12)\n"
         "  -shb  Use alternate SHL/SHR behavior\n"
     );
 }
 
-void check_index(int argc, char **argv, int i) {
-	if (i >= argc) {
-		fprintf(stderr, "invalid option %s\n", argv[i - 1]);
+void check_index(size_t i, size_t cnt) {
+	if (i >= cnt) {
+		fprintf(stderr, "error parsing last option\n");
 		exit(1);
 	}
 }
@@ -76,13 +100,17 @@ int main(int argc, char *argv[]) {
 
 	for (size_t i = 1; i < argc; i++) {
 		if (strcmp(argv[i], "-bg") == 0) {
-			bg = strtoul(argv[++i], NULL, 0);
+			check_index(++i, argc);
+			bg = strtoul(argv[i], NULL, 0);
 	 	} else if (strcmp(argv[i], "-fg") == 0) {
-			fg = strtoul(argv[++i], NULL, 0);
+			check_index(++i, argc);
+			fg = strtoul(argv[i], NULL, 0);
 	 	} else if (strcmp(argv[i], "-ss") == 0) {
-			ss = strtoul(argv[++i], NULL, 0);
+			check_index(++i, argc);
+			ss = strtoul(argv[i], NULL, 0);
 	 	} else if (strcmp(argv[i], "-rs") == 0) {
-			rs = strtoul(argv[++i], NULL, 0);
+			check_index(++i, argc);
+			rs = strtoul(argv[i], NULL, 0);
 	 	} else if (strcmp(argv[i], "-shb") == 0) {
 			shb = 1;
 	 	} else {
@@ -118,6 +146,13 @@ int main(int argc, char *argv[]) {
 	int width  = CHIP8_WIDTH  * ss;
 	int height = CHIP8_HEIGHT * ss;
 
+	/* Setup audio */
+	InitAudioDevice();
+    AudioStream stream = LoadAudioStream(sampleRate, 32, 1);
+    SetAudioStreamCallback(stream, audio_callback);
+    PlayAudioStream(stream);
+
+	/* Setup window */
 	InitWindow(width, height, "Chip8");
 	SetTargetFPS(60);
 
@@ -147,6 +182,7 @@ int main(int argc, char *argv[]) {
 		/* Timers */ {
 			if (m.DT > 0) m.DT--;
 			if (m.ST > 0) m.ST--;
+			beep = m.ST;
 		}
 
 		/* Draw */ {
@@ -162,6 +198,8 @@ int main(int argc, char *argv[]) {
 		EndDrawing();
 	}
 
+	UnloadAudioStream(stream);
+	CloseAudioDevice();
 	CloseWindow();
 	return 0;
 }
