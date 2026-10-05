@@ -7,7 +7,7 @@
 #define CHIP8_IMPLEMENTATION
 #include "chip8.h"
 
-unsigned char key_mapping[255];
+unsigned char key_mapping[256];
 
 void init_key_mapping(void) {
 	memset(key_mapping, 0xFF, sizeof(key_mapping));
