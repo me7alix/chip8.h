@@ -298,13 +298,13 @@ void chip8_exec(Chip8 *m) {
 
 		case 0x55: /* Fx55 - LD [I], Vx */
 			for (unsigned char i = 0; i <= x; i++)
-				m->RAM[m->I + i] = m->V[i];
+				m->RAM[m->I++] = m->V[i];
 			m->PC += 2;
 			break;
 
 		case 0x65: /* Fx65 - LD Vx, [I] */
 			for (unsigned char i = 0; i <= x; i++)
-				m->V[i] = m->RAM[m->I + i];
+				m->V[i] = m->RAM[m->I++];
 			m->PC += 2;
 		}
 	}
